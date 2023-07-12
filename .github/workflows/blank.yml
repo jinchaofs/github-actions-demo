@@ -1,36 +1,56 @@
-# This is a basic workflow to help you get started with Actions
-
-name: CI
+name: AutoUpdateVersion
 
 # Controls when the workflow will run
+# 控制工作流何时运行
 on:
   # Triggers the workflow on push or pull request events but only for the "main" branch
+  # 当主分支存在 push 或者 pull请 求时触发任务
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
   # Allows you to run this workflow manually from the Actions tab
+  # 允许, 从仓库的 Actions 选项卡手动运行当前工作流
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
+# 工作流由一个或多个作业组成，这些作业可以顺序运行，也可以并行运行
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
+    # 作业运行的系统环境（运行时环境）
     runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
+    # 步骤，表示完成该作业的一些列原子操作/步骤
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Check if version update is needed
+        id: version-check
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          # 获取最近的提交信息
+          latest_commit_message=$(git log --pretty=format:%s -1)
+
+          # 检查提交信息是否包含 [AutoUpdateVersion]，主要用于防止发生任务死循环
+          # 如果最新提交时更新版本号，则无需再触发任务，直接退出
+          if [[ $latest_commit_message == *"[AutoUpdateVersion]"* ]]; then
+            echo "Skip version update as it was triggered by an automated commit"
+            exit 78
+          else
+            echo "Version update is needed"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Update version and commit changes
+        if: steps.version-check.outcome == 'success'
+        run: |
+          # 执行更新版本号
+          node updateVersion.js
+
+      - name: Push changes to main branch
+        if: steps.version-check.outcome == 'success'
+        uses: ad-m/github-push-action@master
+        with:
+          branch: main
+          github_token: ${{ secrets.GITHUB_TOKEN }}
