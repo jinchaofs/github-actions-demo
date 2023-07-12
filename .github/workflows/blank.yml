@@ -24,9 +24,20 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     # 步骤，表示完成该作业的一些列原子操作/步骤
     steps:
+      # 切到仓库的workspace(根目录)
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 配置Git用户
+      - name: Configure Git
+        env:
+          GIT_USERNAME: ${{ secrets.NAME }}
+          GIT_EMAIL: ${{ secrets.EMAIL }}
+        run: |
+          git config --global user.name "${GIT_USERNAME}"
+          git config --global user.email "${GIT_EMAIL}"
+
+      # 检查是否需要更新版本
       - name: Check if version update is needed
         id: version-check
         run: |
@@ -42,12 +53,14 @@ jobs:
             echo "Version update is needed"
           fi
 
+      # 更新版本号并提交
       - name: Update version and commit changes
         if: steps.version-check.outcome == 'success'
         run: |
           # 执行更新版本号
           node updateVersion.js
 
+      # 同步提交
       - name: Push changes to main branch
         if: steps.version-check.outcome == 'success'
         uses: ad-m/github-push-action@master
