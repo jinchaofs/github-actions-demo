@@ -24,6 +24,9 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     # 步骤，表示完成该作业的一些列原子操作/步骤
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Check if version update is needed
         id: version-check
         run: |
@@ -38,9 +41,6 @@ jobs:
           else
             echo "Version update is needed"
           fi
-
-      - name: Checkout repository
-        uses: actions/checkout@v3
 
       - name: Update version and commit changes
         if: steps.version-check.outcome == 'success'
